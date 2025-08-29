@@ -1,0 +1,43 @@
+package com.example.bfhjavaboot;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
+import java.util.HashMap;
+import java.util.Map;
+@SpringBootApplication
+public class BfhJavaApplication implements CommandLineRunner {
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper mapper = new ObjectMapper();
+    public static void main(String[] args) {
+        SpringApplication.run(BfhJavaApplication.class, args);
+    }
+    @Override
+    public void run(String... args) throws Exception {
+        String generateUrl = "https://bfhldevapigw.healthrx.co.in/hiring/generateWebhook/JAVA";
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("name", "John Doe");
+        requestBody.put("regNo", "REG12347");
+        requestBody.put("email", "john@example.com"); 
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(generateUrl, entity, String.class);
+        System.out.println("Webhook Response: " + response.getBody());
+        JsonNode root = mapper.readTree(response.getBody());
+        String webhookUrl = root.get("webhook").asText();
+        String accessToken = root.get("accessToken").asText();
+        String finalQuery = "SELECT department, COUNT(*) FROM employees GROUP BY department;";
+        headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+        Map<String, String> finalBody = new HashMap<>();
+        finalBody.put("finalQuery", finalQuery);
+        HttpEntity<Map<String, String>> finalEntity = new HttpEntity<>(finalBody, headers);
+        ResponseEntity<String> finalResponse = restTemplate.postForEntity(webhookUrl, finalEntity, String.class);
+        System.out.println("Final Submission Response: " + finalResponse.getBody());
+    }
+}
